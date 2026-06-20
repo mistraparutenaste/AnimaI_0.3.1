@@ -31,6 +31,188 @@ async function fetchPromptsData() {
     }
 }
 
+/**
+ * Fetch favorites data from the Rust backend API
+ */
+async function fetchFavoritesData() {
+    try {
+        const response = await fetch('/api/favorites');
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return await response.json();
+    } catch (e) {
+        console.error('Failed to fetch favorites data from API', e);
+        return [];
+    }
+}
+
+/**
+ * Render the favorites list
+ */
+function renderFavorites(presets) {
+    const listEl = document.getElementById('favorites-list');
+    if (!listEl) return;
+    
+    listEl.innerHTML = '';
+    
+    if (presets.length === 0) {
+        listEl.innerHTML = '<div class="no-favorites">保存されたお気に入りはまだありません。</div>';
+        return;
+    }
+    
+    presets.forEach(preset => {
+        const item = document.createElement('div');
+        item.className = 'favorite-item';
+        
+        // Item click behavior: load preset
+        item.addEventListener('click', () => {
+            loadPreset(preset);
+        });
+        
+        const content = document.createElement('div');
+        content.className = 'favorite-item-content';
+        
+        const nameEl = document.createElement('div');
+        nameEl.className = 'favorite-item-name';
+        nameEl.textContent = '⭐ ' + preset.name;
+        
+        const metaEl = document.createElement('div');
+        metaEl.className = 'favorite-item-meta';
+        
+        const posCount = preset.positive ? preset.positive.length : 0;
+        const negCount = preset.negative ? preset.negative.length : 0;
+        metaEl.innerHTML = `<span>ポジティブ: ${posCount}</span> <span>ネガティブ: ${negCount}</span>`;
+        
+        content.appendChild(nameEl);
+        content.appendChild(metaEl);
+        
+        const actions = document.createElement('div');
+        actions.className = 'favorite-item-actions';
+        
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'fav-delete-btn';
+        deleteBtn.innerHTML = '🗑️';
+        deleteBtn.title = '削除';
+        deleteBtn.addEventListener('click', async (e) => {
+            e.stopPropagation(); // Prevent loading preset when deleting
+            if (confirm(`お気に入り「${preset.name}」を削除してもよろしいですか？`)) {
+                await handleDeleteFavorite(preset.name);
+            }
+        });
+        
+        actions.appendChild(deleteBtn);
+        
+        item.appendChild(content);
+        item.appendChild(actions);
+        listEl.appendChild(item);
+    });
+}
+
+/**
+ * Load a favorite preset into the current selection
+ */
+function loadPreset(preset) {
+    state.positiveTags.clear();
+    state.negativeTags.clear();
+    
+    // Clear all active classes
+    state.tagElements.forEach(btn => btn.classList.remove('active'));
+    
+    // Load positive tags
+    if (preset.positive && Array.isArray(preset.positive)) {
+        preset.positive.forEach(tag => {
+            state.positiveTags.add(tag);
+            const btn = state.tagElements.get(tag);
+            if (btn) {
+                btn.classList.add('active');
+            }
+        });
+    }
+    
+    // Load negative tags
+    if (preset.negative && Array.isArray(preset.negative)) {
+        preset.negative.forEach(tag => {
+            state.negativeTags.add(tag);
+            const btn = state.tagElements.get(tag);
+            if (btn) {
+                btn.classList.add('active');
+            }
+        });
+    }
+    
+    updateOutputs();
+}
+
+/**
+ * Save current tags as a favorite preset
+ */
+async function handleSaveFavorite() {
+    const inputEl = document.getElementById('favorite-name-input');
+    if (!inputEl) return;
+    
+    const name = inputEl.value.trim();
+    if (!name) {
+        alert('お気に入りの名前を入力してください。');
+        return;
+    }
+    
+    if (state.positiveTags.size === 0 && state.negativeTags.size === 0) {
+        alert('プロンプトが選択されていません。タグを選択してから保存してください。');
+        return;
+    }
+    
+    const preset = {
+        name: name,
+        positive: Array.from(state.positiveTags),
+        negative: Array.from(state.negativeTags)
+    };
+    
+    try {
+        const response = await fetch('/api/favorites', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(preset)
+        });
+        
+        if (response.ok) {
+            inputEl.value = '';
+            // Refresh favorites list
+            const updatedPresets = await fetchFavoritesData();
+            renderFavorites(updatedPresets);
+        } else {
+            alert('保存に失敗しました。ファイル名に使用できない文字が含まれている可能性があります。');
+        }
+    } catch (e) {
+        console.error('Failed to save favorite preset', e);
+        alert('保存中にエラーが発生しました。');
+    }
+}
+
+/**
+ * Delete a favorite preset
+ */
+async function handleDeleteFavorite(name) {
+    try {
+        const response = await fetch(`/api/favorites/${encodeURIComponent(name)}`, {
+            method: 'DELETE'
+        });
+        
+        if (response.ok) {
+            // Refresh favorites list
+            const updatedPresets = await fetchFavoritesData();
+            renderFavorites(updatedPresets);
+        } else {
+            alert('削除に失敗しました。');
+        }
+    } catch (e) {
+        console.error('Failed to delete favorite preset', e);
+        alert('削除中にエラーが発生しました。');
+    }
+}
+
 // ==========================================================================
 // Core UI Logic
 // ==========================================================================
@@ -158,6 +340,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     renderCategories(data.nsfw, nsfwContainer, false, false); // NSFW: collapse all by default
     renderCategories(data.negative, negativeContainer, true, true); // Negative: open the first one by default
     
+    // 2.5. Fetch and render favorites
+    const favorites = await fetchFavoritesData();
+    renderFavorites(favorites);
+    
     // --- Tabs Navigation ---
     const tabBtns = document.querySelectorAll('.tab-btn');
     const tabPanels = document.querySelectorAll('.tab-panel');
@@ -227,6 +413,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     manualNegativeInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') handleManualAdd(manualNegativeInput, true);
     });
+    
+    // --- Favorites Listeners ---
+    const saveFavoriteBtn = document.getElementById('save-favorite-btn');
+    const favoriteNameInput = document.getElementById('favorite-name-input');
+    
+    if (saveFavoriteBtn && favoriteNameInput) {
+        saveFavoriteBtn.addEventListener('click', handleSaveFavorite);
+        favoriteNameInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') handleSaveFavorite();
+        });
+    }
     
     // --- Clear Action Buttons ---
     document.getElementById('clear-positive-btn').addEventListener('click', () => {

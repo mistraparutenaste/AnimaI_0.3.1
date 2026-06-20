@@ -534,6 +534,118 @@ body {
     border: 1px solid rgba(244, 63, 94, 0.3);
 }
 
+.favorites-badge {
+    background: rgba(16, 185, 129, 0.15);
+    color: #6ee7b7;
+    border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+.favorites-container {
+    max-height: 220px;
+    overflow-y: auto;
+    border-radius: 10px;
+    background: var(--bg-textarea);
+    border: 1px solid var(--border-color);
+    padding: 12px;
+}
+
+.favorites-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.no-favorites {
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    padding: 24px 0;
+}
+
+.favorite-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--bg-tag);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 10px 14px;
+    cursor: pointer;
+    transition: var(--transition-fast);
+}
+
+.favorite-item:hover {
+    background: var(--bg-tag-hover);
+    border-color: var(--border-active);
+    transform: translateY(-1px);
+}
+
+.favorite-item-content {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    overflow: hidden;
+    flex-grow: 1;
+}
+
+.favorite-item-name {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.favorite-item-meta {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+
+.favorite-item-meta span {
+    margin-right: 8px;
+}
+
+.favorite-item-actions {
+    display: flex;
+    align-items: center;
+    margin-left: 8px;
+}
+
+.fav-delete-btn {
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--text-muted);
+    font-size: 1.1rem;
+    cursor: pointer;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition-fast);
+}
+
+.fav-delete-btn:hover {
+    background: rgba(244, 63, 94, 0.15);
+    color: #fda4af;
+}
+
+#save-favorite-btn {
+    background: var(--primary-gradient);
+    color: white;
+    font-weight: 600;
+    border: none;
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+}
+
+#save-favorite-btn:hover {
+    opacity: 0.95;
+    transform: translateY(-1px);
+}
+
 /* Textarea wrapper */
 .textarea-wrapper {
     position: relative;

@@ -73,6 +73,25 @@
             <!-- 右側：プレビュー＆操作エリア -->
             <section class="preview-section">
                 <div class="sticky-preview-container">
+                    <!-- お気に入りプリセット -->
+                    <div class="preview-card" id="favorites-card">
+                        <div class="preview-header">
+                            <h2>お気に入りセット (Favorites)</h2>
+                            <div class="badge favorites-badge">保存フォルダ</div>
+                        </div>
+                        <div class="favorites-container">
+                            <div class="favorites-list" id="favorites-list">
+                                <div class="no-favorites">保存されたお気に入りはまだありません。</div>
+                            </div>
+                        </div>
+                        <div class="favorites-actions">
+                            <div class="manual-input-group">
+                                <input type="text" id="favorite-name-input" placeholder="お気に入りの名前を入力...">
+                                <button id="save-favorite-btn">現在を保存</button>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- ポジティブプロンプトプレビュー -->
                     <div class="preview-card" id="positive-preview-card">
                         <div class="preview-header">

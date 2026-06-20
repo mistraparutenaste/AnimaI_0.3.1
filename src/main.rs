@@ -2,7 +2,7 @@ use axum::{
     body::Body,
     http::{header, Response, StatusCode},
     response::IntoResponse,
-    routing::get,
+    routing::{get, post, delete},
     Json, Router,
 };
 use rust_embed::{Embed, RustEmbed};
@@ -36,6 +36,13 @@ struct Asset;
 struct PromptItem {
     japanese: String,
     prompt: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+struct FavoritePreset {
+    name: String,
+    positive: Vec<String>,
+    negative: Vec<String>,
 }
 
 #[derive(Debug, Serialize, Clone)]
@@ -73,7 +80,7 @@ const DEFAULT_CSVS: &[(&str, &str)] = &[
     ("n_expression.csv", "Japanese,Prompt\nアヘ顔,\"ahegao\"\n舌出し,\"tongue out\"\n恍惚とした表情,\"ecstasy\"\n羞恥/恥ずかしそうな顔,\"embarrassed\"\n淫らな笑顔,\"lewd smile\"\n息が荒い,\"heavy breathing\"\nキス待ちの顔,\"waiting for kiss\"\nよだれ/涎,\"drooling\"\n蕩けた目,\"dilated pupils, dreamy eyes\"\nトランス状態,\"trance\"\n媚びるような目,\"seductive look\"\n悶える表情,\"pained smile\"\n喘ぎ顔,\"orgasm face\"\nハート目,\"heart-shaped pupils\""),
     ("n_accessories.csv", "Japanese,Prompt\n首輪,\"collar\"\n手錠,\"handcuffs\"\n目隠し,\"blindfold\"\n縄/緊縛,\"rope, bondage\"\nニップルピアス,\"nipple piercing\"\nガーターベルト,\"garter belt\"\n口枷,\"gag\"\n拘束衣,\"straitjacket\"\n鎖,\"chains\"\n性玩具/バイブ,\"sex toy, vibrator\"\n乳首クリップ,\"nipple clamps\"\nアナルプラグ,\"anal plug\"\nアイマスク,\"eye mask\"\n紐パン,\"side-tie panties\""),
     ("n_pose.csv", "Japanese,Prompt\n股を開く,\"legs spread\"\n前屈み/お尻を向ける,\"bent over, presenting\"\nM字開脚,\"m-leg split\"\n四つん這い,\"all fours\"\n寝そべって股を開く,\"lying on back, legs spread\"\n胸を強調する,\"breast squeeze\"\nお尻を強調する,\"ass focus\"\n脚を組む,\"legs crossed\"\n股間のクローズアップ,\"crotch close-up\"\n胸のクローズアップ,\"breast close-up\"\n腰を振る,\"hip shake\"\n自ら服をめくりあげる,\"shirt lift, skirt lift\"\nバックショット/後ろから,\"from behind, backshot\""),
-    ("n_situation.csv", "Japanese,Prompt\n服を脱ぐ/脱衣,\"undressing, stripping\"\n服を破られる,\"ripped clothes\"\nシャワーを浴びる,\"shivering in shower\"\n胸を揉まれる,\"groping\"\n愛撫,\"caressing\"\nお風呂,\"in bath\"\nセクシャルなマッサージ,\"sexual massage\"\n潮吹き,\"squirt\"\n射精される,\"cum inside, cum on body\"\n顔射,\"facial cum\"\n乳房の間で挟む/パイズリ,\"paizuri, breast stimulation\"\n手コキ,\"handjob\"\nフェラチオ,\"fellatio, blowjob\"\nクンニリングス,\"cunnilingus\"\nセックス/挿入,\"sex, vaginal penetration\"\nバックシチュエーション,\"doggystyle, penetration from behind\""),
+    ("n_situation.csv", "Japanese,Prompt\n服を脱ぐ/脱衣,\"undressing, stripping\"\n服を破られる,\"ripped clothes\"\nシャワーを浴びる,\"shivering in shower\"\n胸を揉まれる,\"groping\"\n愛撫,\"caressing\"\nお風呂,\"in bath\"\nセクシャルなマッサージ,\"sexual massage\"\n潮吹き,\"squirt\"\n射精される,\"cum inside, cum on body\"\n顔射,\"facial cum\"\n乳房の間で挟む/パイズリ,\"paizuri, breast stimulation\"\n手コキ,\"handjob\"\nフェラチオ,\"fellatio, blowjob\"\nクンニリングス,\"cunnilingus\"\nセックス/挿入,\"sex, vaginal penetration\"\nバックシチュエーション,\"doggystyle, penetration from behind\"\n中出し/膣内射精,\"creampie, vaginal cum\"\nアナル中出し/アナル射精,\"anal creampie, anal cum\"\n生セックス/生ハメ,\"bareback, raw sex\"\nコンドーム着用,\"condom, wearing condom\"\nペニス/勃起,\"penis, erect penis\"\n竿握り/ペニスを握る,\"holding penis\"\nイラマチオ/深口工,\"irrumatio, deepthroat\"\nダブル挿入/2本挿し,\"double penetration\"\n射精/放精,\"ejaculation, cumming\""),
     ("negative_prompt.csv", "Japanese,Prompt\n基本ネガティブセット,\"lowres, bad anatomy, bad hands, text, error, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality, normal quality, jpeg artifacts, signature, watermark, username, blurry\"\n低クオリティ除外,\"worst quality, low quality, normal quality, lowres\"\n奇形手足除外,\"bad anatomy, bad hands, missing fingers, extra digit, fewer digits, mutated hands, poorly drawn hands, poorly drawn face, mutation, deformed\"\nテキスト・文字除外,\"text, watermark, signature, username, logo, words, letters\"\n崩れた顔除外,\"deformed iris, deformed pupils, bad eyes, poorly drawn eyes, bad face, poorly drawn face\"\n変なポーズ・崩れ除外,\"bad proportions, extra limbs, cloned face, disfigured, gross proportions, malformed limbs, missing arms, missing legs, extra arms, extra legs, mutated hands\"\nNSFW要素の排除(SFW設定),\"nsfw, nudity, naked, nipples, vaginal, pubic hair, breast squeeze, adult content, suggestive\""),
 ];
 
@@ -83,18 +90,18 @@ const DEFAULT_CSVS: &[(&str, &str)] = &[
 fn get_friendly_name(filename: &str) -> String {
     let base = filename.trim_end_matches(".csv");
     match base {
-        "quality" => "品質 (Quality)".to_string(),
-        "art_style" => "画風 (Art Style)".to_string(),
-        "subject" => "人物 (Subject)".to_string(),
-        "expression" => "表情 (Expression)".to_string(),
-        "pose" => "ポーズ (Pose)".to_string(),
-        "hair" => "髪 (Hair)".to_string(),
-        "situation" => "シチュエーション (Situation)".to_string(),
-        "clothing_real" => "服装 - リアル (Clothing Real)".to_string(),
-        "clothing_fantasy" => "服装 - ファンタジー (Clothing Fantasy)".to_string(),
-        "accessories" => "アクセサリー (Accessories)".to_string(),
-        "background" => "背景 (Background)".to_string(),
-        "effect" => "効果 (Effect)".to_string(),
+        "quality" => "品質".to_string(),
+        "art_style" => "画風".to_string(),
+        "subject" => "人物".to_string(),
+        "expression" => "表情".to_string(),
+        "pose" => "ポーズ".to_string(),
+        "hair" => "髪".to_string(),
+        "situation" => "シチュエーション".to_string(),
+        "clothing_real" => "服装 - リアル".to_string(),
+        "clothing_fantasy" => "服装 - ファンタジー".to_string(),
+        "accessories" => "アクセサリー".to_string(),
+        "background" => "背景".to_string(),
+        "effect" => "効果".to_string(),
         "n_body_type" => "NSFW 体形".to_string(),
         "n_nsfw" => "NSFW 基本設定".to_string(),
         "n_expression" => "NSFW 表情".to_string(),
@@ -160,7 +167,29 @@ fn parse_csv_file(path: &Path) -> Result<Vec<PromptItem>, Box<dyn std::error::Er
         if parts.len() >= 2 {
             let jp = parts[0].trim_matches('"').trim().to_string();
             let en = parts[1].trim_matches('"').trim().to_string();
-            items.push(PromptItem { japanese: jp, prompt: en });
+            
+            let jp_normalized = jp.replace('／', "/");
+            if jp_normalized.contains('/') {
+                let jp_parts: Vec<String> = jp_normalized.split('/')
+                    .map(|s| s.trim().to_string())
+                    .filter(|s| !s.is_empty())
+                    .collect();
+                
+                let en_parts: Vec<String> = en.split(',')
+                    .map(|s| s.trim().to_string())
+                    .filter(|s| !s.is_empty())
+                    .collect();
+                
+                if jp_parts.len() == en_parts.len() {
+                    for (j_part, e_part) in jp_parts.into_iter().zip(en_parts.into_iter()) {
+                        items.push(PromptItem { japanese: j_part, prompt: e_part });
+                    }
+                } else {
+                    items.push(PromptItem { japanese: jp, prompt: en });
+                }
+            } else {
+                items.push(PromptItem { japanese: jp, prompt: en });
+            }
         }
     }
     
@@ -186,6 +215,36 @@ fn get_csv_dir() -> std::path::PathBuf {
         }
     }
     pwd_csv.to_path_buf()
+}
+
+// ==========================================================================
+// Favorites Path Helper
+// ==========================================================================
+fn get_favorites_dir() -> std::path::PathBuf {
+    let pwd_fav = std::path::Path::new("favorites");
+    if pwd_fav.exists() {
+        return pwd_fav.to_path_buf();
+    }
+    if let Ok(mut exe_path) = std::env::current_exe() {
+        exe_path.pop();
+        exe_path.push("favorites");
+        if exe_path.exists() {
+            return exe_path;
+        }
+        if std::env::var("CARGO_MANIFEST_DIR").is_err() {
+            return exe_path;
+        }
+    }
+    pwd_fav.to_path_buf()
+}
+
+fn init_favorites_directory() -> Result<(), std::io::Error> {
+    let fav_dir = get_favorites_dir();
+    if !fav_dir.exists() {
+        println!("Creating favorites directory at {:?}", fav_dir);
+        fs::create_dir(&fav_dir)?;
+    }
+    Ok(())
 }
 
 // ==========================================================================
@@ -293,6 +352,103 @@ async fn get_prompts() -> Json<PromptsResponse> {
     })
 }
 
+// ==========================================================================
+// Favorites Handlers
+// ==========================================================================
+async fn get_favorites() -> Result<Json<Vec<FavoritePreset>>, StatusCode> {
+    let fav_dir = get_favorites_dir();
+    if !fav_dir.exists() {
+        return Ok(Json(Vec::new()));
+    }
+    
+    let mut presets = Vec::new();
+    if let Ok(entries) = fs::read_dir(&fav_dir) {
+        for entry in entries.filter_map(Result::ok) {
+            let path = entry.path();
+            if path.extension().map_or(false, |ext| ext == "json") {
+                if let Ok(content) = fs::read_to_string(&path) {
+                    if let Ok(preset) = serde_json::from_str::<FavoritePreset>(&content) {
+                        presets.push(preset);
+                    }
+                }
+            }
+        }
+    }
+    
+    presets.sort_by(|a, b| a.name.cmp(&b.name));
+    Ok(Json(presets))
+}
+
+async fn save_favorite(Json(preset): Json<FavoritePreset>) -> Result<StatusCode, StatusCode> {
+    let fav_dir = get_favorites_dir();
+    if !fav_dir.exists() {
+        if let Err(e) = fs::create_dir(&fav_dir) {
+            eprintln!("Failed to create favorites dir: {}", e);
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);
+        }
+    }
+    
+    let name_trimmed = preset.name.trim();
+    if name_trimmed.is_empty() {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+    
+    let safe_filename: String = name_trimmed.chars()
+        .filter(|&c| !matches!(c, '/' | '\\' | ':' | '*' | '?' | '"' | '<' | '>' | '|' | '\0'))
+        .collect();
+        
+    let safe_filename = safe_filename.trim();
+    if safe_filename.is_empty() {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+    
+    let filename = format!("{}.json", safe_filename);
+    let path = fav_dir.join(filename);
+    
+    match serde_json::to_string_pretty(&preset) {
+        Ok(json_str) => {
+            if let Err(e) = fs::write(path, json_str) {
+                eprintln!("Failed to write favorite file: {}", e);
+                Err(StatusCode::INTERNAL_SERVER_ERROR)
+            } else {
+                Ok(StatusCode::CREATED)
+            }
+        }
+        Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
+    }
+}
+
+async fn delete_favorite(axum::extract::Path(name): axum::extract::Path<String>) -> Result<StatusCode, StatusCode> {
+    let fav_dir = get_favorites_dir();
+    let name_trimmed = name.trim();
+    if name_trimmed.is_empty() {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+    
+    let safe_filename: String = name_trimmed.chars()
+        .filter(|&c| !matches!(c, '/' | '\\' | ':' | '*' | '?' | '"' | '<' | '>' | '|' | '\0'))
+        .collect();
+        
+    let safe_filename = safe_filename.trim();
+    if safe_filename.is_empty() {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+    
+    let filename = format!("{}.json", safe_filename);
+    let path = fav_dir.join(filename);
+    
+    if path.exists() && path.is_file() {
+        if let Err(e) = fs::remove_file(path) {
+            eprintln!("Failed to delete favorite file: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        } else {
+            Ok(StatusCode::OK)
+        }
+    } else {
+        Err(StatusCode::NOT_FOUND)
+    }
+}
+
 // Handler serving static embedded files
 async fn static_handler(path: &str) -> impl IntoResponse {
     let path = if path.is_empty() || path == "/" { "index.html" } else { path.trim_start_matches('/') };
@@ -337,11 +493,16 @@ async fn main() {
         eprintln!("Failed to initialize CSV directory: {}", e);
         return;
     }
+    if let Err(e) = init_favorites_directory() {
+        eprintln!("Failed to initialize favorites directory: {}", e);
+    }
     
     // 2. Build Axum Router
     let app = Router::new()
         .route("/api/prompts", get(get_prompts))
         .route("/api/ping", get(ping))
+        .route("/api/favorites", get(get_favorites).post(save_favorite))
+        .route("/api/favorites/:name", delete(delete_favorite))
         .fallback(get(|uri: axum::http::Uri| async move {
             static_handler(uri.path()).await
         }));

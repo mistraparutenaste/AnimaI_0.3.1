@@ -1,0 +1,16 @@
+{
+  "name": "sample",
+  "positive": [
+    "masterpiece",
+    "4k resolution",
+    "trending on artstation",
+    "anime style",
+    "1girl",
+    "wink",
+    "standing",
+    "short hair"
+  ],
+  "negative": [
+    "lowres, bad anatomy, bad hands, text, error, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality, normal quality, jpeg artifacts, signature, watermark, username, blurry"
+  ]
+}
