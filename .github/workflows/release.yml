@@ -1,0 +1,39 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*' # Push events to matching v*, i.e. v1.0, v20.15.10
+
+jobs:
+  build:
+    name: Build and Release Windows Binary
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+      
+    - name: Setup Rust
+      uses: dtolnay/rust-toolchain@stable
+      
+    - name: Build Release Binary
+      run: cargo build --release
+      
+    - name: Prepare Release Package
+      run: |
+        mkdir AnimaI_Release
+        copy target\release\animai.exe AnimaI_Release\
+        copy start.bat AnimaI_Release\
+        copy README.md AnimaI_Release\
+        copy logo.png AnimaI_Release\
+        copy LICENSE AnimaI_Release\
+        xcopy /E /I csv AnimaI_Release\csv\
+        Compress-Archive -Path AnimaI_Release\* -DestinationPath AnimaI-Windows.zip
+        
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: AnimaI-Windows.zip
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

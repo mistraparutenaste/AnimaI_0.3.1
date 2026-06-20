@@ -1,0 +1,10 @@
+Japanese,Prompt
+基本ネガティブセット,"lowres, bad anatomy, bad hands, text, error, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality, normal quality, jpeg artifacts, signature, watermark, username, blurry"
+低クオリティ除外,"worst quality, low quality, normal quality, lowres"
+奇形手足除外,"bad anatomy, bad hands, missing fingers, extra digit, fewer digits, mutated hands, poorly drawn hands, poorly drawn face, mutation, deformed"
+テキスト・文字除外,"text, watermark, signature, username, logo, words, letters"
+崩れた顔除外,"deformed iris, deformed pupils, bad eyes, poorly drawn eyes, bad face, poorly drawn face"
+変なポーズ・崩れ除外,"bad proportions, extra limbs, cloned face, disfigured, gross proportions, malformed limbs, missing arms, missing legs, extra arms, extra legs, mutated hands"
+NSFW要素の排除(SFW設定),"nsfw, nudity, naked, nipples, vaginal, pubic hair, breast squeeze, adult content, suggestive"
+ぼやけた背景除外,"blurry background"
+3D風除外（2Dイラスト向け）,"3d, photorealistic, realistic"
