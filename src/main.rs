@@ -13,6 +13,8 @@ use std::{
     io::Write,
     net::SocketAddr,
     path::Path,
+    sync::{Mutex, OnceLock},
+    time::Instant,
 };
 
 // ==========================================================================
@@ -66,6 +68,7 @@ const DEFAULT_CSVS: &[(&str, &str)] = &[
     ("accessories.csv", "Japanese,Prompt\n眼鏡,\"glasses\"\nリボン,\"ribbon\"\nチョーカー,\"choker\"\nネックレス,\"necklace\"\nイヤリング/ピアス,\"earrings\"\nヘアピン,\"hairpin\"\n帽子,\"hat\"\n王冠/ティアラ,\"crown\"\n指輪,\"ring\"\nネクタイ,\"necktie\"\nマフラー,\"scarf\"\n手袋,\"gloves\"\nヘッドホン,\"headphones\"\n腕時計,\"wrist watch\"\nベール,\"veil\"\nベルト,\"belt\"\nアンクレット,\"anklet\"\nブレスレット,\"bracelet\"\nカチューシャ,\"headband\"\n狐のお面,\"fox mask\"\nガスマスク,\"gas mask\"\nヘアバンド,\"hair band\""),
     ("background.csv", "Japanese,Prompt\n教室,\"classroom\"\n砂浜/ビーチ,\"beach\"\n森林/森,\"forest\"\n都会の街並み,\"city street\"\n夜空と星,\"night sky, stars\"\nカフェ,\"cafe\"\n図書館,\"library\"\nファンタジーの世界,\"fantasy world\"\n和室,\"japanese style room\"\n廃墟,\"ruins\"\n公園,\"park\"\n青空と雲,\"blue sky, clouds\"\n部屋/寝室,\"bedroom\"\n宇宙,\"outer space\"\n夕暮れの街,\"sunset street\"\nお城/宮殿,\"castle, palace\"\n山,\"mountains\"\n雪景色,\"snow scene\"\nネオン輝くサイバーパンク街,\"cyberpunk city lights, neon\"\n水中,\"underwater\"\n花畑,\"flower field\"\n洋館,\"western-style mansion\""),
     ("effect.csv", "Japanese,Prompt\n被写界深度/背景ぼかし,\"depth of field, blurry background\"\nレンズフレア,\"lens flare\"\n逆光,\"backlighting\"\n光の粒子,\"light particles\"\nキラキラ/グリッター,\"glittering\"\nネオン光,\"neon glow\"\nシネマティックライティング,\"cinematic lighting\"\nソフトフォーカス,\"soft focus\"\n影の演出,\"dramatic shadows\"\n水滴/雨のエフェクト,\"water drops, rain effect\"\n風の演出,\"wind blow\"\nカラフルな光,\"colorful light\"\n光の線,\"light streaks\"\n煙/スモーク,\"smoke, haze\"\nゴッドレイ/光の差し込み,\"god rays, sun beams\"\n炎のエフェクト,\"fire effect\"\n氷のエフェクト,\"ice effect\"\n電気/雷エフェクト,\"lightning effect\"\n魔法陣/スペルエフェクト,\"magic circle, spell effect\"\n水しぶき,\"water splash\"\n桜吹雪,\"cherry blossoms scattering\"\n羽が舞う,\"falling feathers\""),
+    ("n_body_type.csv", "Japanese,Prompt\n巨乳,\"large breasts\"\n貧乳/ちっぱい,\"small breasts, flat chest\"\n爆乳,\"huge breasts\"\nぽっちゃり,\"chubby, plump\"\nスレンダー/細身,\"slender, slim\"\nむっちり/肉感的な体,\"thick thighs, curvy\"\n筋肉質/腹筋,\"muscular, female muscle, abs\"\nくびれ,\"hourglass figure, narrow waist\"\n巨尻/大きなお尻,\"huge ass, large hips\"\n低身長/小柄,\"petite, short stature\"\n高身長,\"tall female\"\n妊娠/妊婦,\"pregnant\"\n巨乳化,\"breast expansion\"\nふたなり,\"futanari\""),
     ("n_nsfw.csv", "Japanese,Prompt\nNSFW（成人向け表示）,\"nsfw\"\nヌード/裸,\"nudity, naked\"\nトップレス/上半身裸,\"topless\"\nボトムレス/下半身裸,\"bottomless\"\nモザイクなし,\"uncensored\"\n半裸,\"semi-nudity\"\n露出度の高い服,\"revealing clothes\"\n完全ヌード,\"completely naked, fully nude\"\n局部露出,\"genitals exposed\"\nパンスト越しの透け,\"panties under pantyhose, sheer clothing\"\n下着姿,\"lingerie, underwear\"\n水着姿,\"swimwear, bikini\"\nマイクロビキニ,\"micro bikini\"\n透け透けの服,\"see-through clothing\""),
     ("n_expression.csv", "Japanese,Prompt\nアヘ顔,\"ahegao\"\n舌出し,\"tongue out\"\n恍惚とした表情,\"ecstasy\"\n羞恥/恥ずかしそうな顔,\"embarrassed\"\n淫らな笑顔,\"lewd smile\"\n息が荒い,\"heavy breathing\"\nキス待ちの顔,\"waiting for kiss\"\nよだれ/涎,\"drooling\"\n蕩けた目,\"dilated pupils, dreamy eyes\"\nトランス状態,\"trance\"\n媚びるような目,\"seductive look\"\n悶える表情,\"pained smile\"\n喘ぎ顔,\"orgasm face\"\nハート目,\"heart-shaped pupils\""),
     ("n_accessories.csv", "Japanese,Prompt\n首輪,\"collar\"\n手錠,\"handcuffs\"\n目隠し,\"blindfold\"\n縄/緊縛,\"rope, bondage\"\nニップルピアス,\"nipple piercing\"\nガーターベルト,\"garter belt\"\n口枷,\"gag\"\n拘束衣,\"straitjacket\"\n鎖,\"chains\"\n性玩具/バイブ,\"sex toy, vibrator\"\n乳首クリップ,\"nipple clamps\"\nアナルプラグ,\"anal plug\"\nアイマスク,\"eye mask\"\n紐パン,\"side-tie panties\""),
@@ -92,6 +95,7 @@ fn get_friendly_name(filename: &str) -> String {
         "accessories" => "アクセサリー (Accessories)".to_string(),
         "background" => "背景 (Background)".to_string(),
         "effect" => "効果 (Effect)".to_string(),
+        "n_body_type" => "NSFW 体形".to_string(),
         "n_nsfw" => "NSFW 基本設定".to_string(),
         "n_expression" => "NSFW 表情".to_string(),
         "n_accessories" => "NSFW アクセサリー".to_string(),
@@ -261,9 +265,30 @@ async fn get_prompts() -> Json<PromptsResponse> {
         sorted_sfw.push(group);
     }
     
+    // Sort NSFW categories according to design priority
+    let nsfw_priority_order = [
+        "n_nsfw.csv", "n_body_type.csv", "n_expression.csv",
+        "n_pose.csv", "n_situation.csv", "n_accessories.csv"
+    ];
+    
+    let mut nsfw_map: HashMap<String, CategoryGroup> = nsfw.into_iter()
+        .map(|item| (item.filename.clone(), item))
+        .collect();
+        
+    let mut sorted_nsfw = Vec::new();
+    for &filename in &nsfw_priority_order {
+        if let Some(group) = nsfw_map.remove(filename) {
+            sorted_nsfw.push(group);
+        }
+    }
+    // Append any remaining custom NSFW files
+    for (_, group) in nsfw_map {
+        sorted_nsfw.push(group);
+    }
+    
     Json(PromptsResponse {
         sfw: sorted_sfw,
-        nsfw,
+        nsfw: sorted_nsfw,
         negative,
     })
 }
@@ -288,6 +313,21 @@ async fn static_handler(path: &str) -> impl IntoResponse {
 }
 
 // ==========================================================================
+// Heartbeat / Shutdown Logic
+// ==========================================================================
+static LAST_PING: OnceLock<Mutex<Option<Instant>>> = OnceLock::new();
+
+fn get_last_ping() -> &'static Mutex<Option<Instant>> {
+    LAST_PING.get_or_init(|| Mutex::new(None))
+}
+
+async fn ping() -> impl IntoResponse {
+    let mut last_ping = get_last_ping().lock().unwrap();
+    *last_ping = Some(Instant::now());
+    StatusCode::OK
+}
+
+// ==========================================================================
 // Main Runner
 // ==========================================================================
 #[tokio::main]
@@ -301,6 +341,7 @@ async fn main() {
     // 2. Build Axum Router
     let app = Router::new()
         .route("/api/prompts", get(get_prompts))
+        .route("/api/ping", get(ping))
         .fallback(get(|uri: axum::http::Uri| async move {
             static_handler(uri.path()).await
         }));
@@ -317,6 +358,22 @@ async fn main() {
         }
     });
     
+    // 3.5. Start ping checker task
+    tokio::spawn(async move {
+        // Wait a bit before starting to check, to give the browser time to open and connect
+        tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
+        loop {
+            tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+            let last = *get_last_ping().lock().unwrap();
+            if let Some(time) = last {
+                if time.elapsed() > std::time::Duration::from_secs(5) {
+                    println!("ブラウザのタブが閉じられたため、サーバーを終了します...");
+                    std::process::exit(0);
+                }
+            }
+        }
+    });
+
     // 4. Bind & Run HTTP Server
     let listener = match tokio::net::TcpListener::bind(addr).await {
         Ok(l) => l,

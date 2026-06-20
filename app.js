@@ -311,4 +311,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             moonIcon.style.display = 'none';
         }
     }
+
+    // --- Heartbeat to keep backend alive ---
+    setInterval(() => {
+        fetch('/api/ping').catch(e => console.error('Ping failed:', e));
+    }, 2000); // Ping every 2 seconds
 });
