@@ -509,6 +509,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
+    const openFavoritesBtn = document.getElementById('open-favorites-btn');
+    if (openFavoritesBtn) {
+        openFavoritesBtn.addEventListener('click', async () => {
+            try {
+                await fetch('/api/open_favorites', { method: 'POST' });
+            } catch (e) {
+                console.error('Failed to open favorites folder:', e);
+            }
+        });
+    }
     // --- Heartbeat to keep backend alive ---
     setInterval(() => {
         fetch('/api/ping').catch(e => console.error('Ping failed:', e));

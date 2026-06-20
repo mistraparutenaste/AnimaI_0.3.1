@@ -449,6 +449,15 @@ async fn delete_favorite(axum::extract::Path(name): axum::extract::Path<String>)
     }
 }
 
+async fn open_favorites_folder() -> Result<StatusCode, StatusCode> {
+    let fav_dir = get_favorites_dir();
+    if let Err(e) = std::process::Command::new("explorer").arg(fav_dir).spawn() {
+        eprintln!("Failed to open explorer: {}", e);
+        return Err(StatusCode::INTERNAL_SERVER_ERROR);
+    }
+    Ok(StatusCode::OK)
+}
+
 // Handler serving static embedded files
 async fn static_handler(path: &str) -> impl IntoResponse {
     let path = if path.is_empty() || path == "/" { "index.html" } else { path.trim_start_matches('/') };
@@ -503,6 +512,7 @@ async fn main() {
         .route("/api/ping", get(ping))
         .route("/api/favorites", get(get_favorites).post(save_favorite))
         .route("/api/favorites/:name", delete(delete_favorite))
+        .route("/api/open_favorites", post(open_favorites_folder))
         .fallback(get(|uri: axum::http::Uri| async move {
             static_handler(uri.path()).await
         }));
