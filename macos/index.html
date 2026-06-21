@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AnimaI T2I - macOS HTML版</title>
+    <link rel="icon" href="icon.png" type="image/png">
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Noto+Sans+JP:wght@300;400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <header class="app-header">
+            <div class="header-content">
+                <div class="title-group">
+                    <h1>AnimaI T2I</h1>
+                    <p class="subtitle">クリックで画像生成AI向けプロンプトを組み立てるHTML単体版</p>
+                </div>
+                <div class="header-controls">
+                    <button id="theme-toggle-btn" class="theme-toggle-btn" title="テーマを切り替え">
+                        <span class="theme-icon-sun">☀</span>
+                        <span class="theme-icon-moon" style="display: none;">☾</span>
+                    </button>
+                    <label class="switch-container">
+                        <input type="checkbox" id="nsfw-toggle">
+                        <span class="switch-slider"></span>
+                        <span class="switch-label">NSFWタグを表示</span>
+                    </label>
+                </div>
+            </div>
+        </header>
+
+        <main class="app-main">
+            <section class="tag-selection-section">
+                <div class="tab-container">
+                    <button class="tab-btn active" data-tab="sfw">ポジティブプロンプト</button>
+                    <button class="tab-btn" data-tab="nsfw" id="nsfw-tab-btn" style="display: none;">NSFWプロンプト</button>
+                    <button class="tab-btn" data-tab="negative">ネガティブプロンプト</button>
+                </div>
+
+                <div class="tab-panels">
+                    <div class="tab-panel active" id="panel-sfw">
+                        <div class="category-grid" id="sfw-categories">
+                            <div class="loading">データを読み込んでいます...</div>
+                        </div>
+                    </div>
+
+                    <div class="tab-panel" id="panel-nsfw">
+                        <div class="category-grid" id="nsfw-categories"></div>
+                    </div>
+
+                    <div class="tab-panel" id="panel-negative">
+                        <div class="category-grid" id="negative-categories"></div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="preview-section">
+                <div class="sticky-preview-container">
+                    <div class="preview-card" id="favorites-card">
+                        <div class="preview-header">
+                            <h2>お気に入りセット</h2>
+                            <div class="badge favorites-badge">ブラウザ保存</div>
+                        </div>
+                        <div class="favorites-container">
+                            <div class="favorites-list" id="favorites-list">
+                                <div class="no-favorites">保存されたお気に入りはまだありません。</div>
+                            </div>
+                        </div>
+                        <div class="favorites-actions">
+                            <div class="manual-input-group">
+                                <input type="text" id="favorite-name-input" placeholder="お気に入り名を入力...">
+                                <button id="save-favorite-btn">現在を保存</button>
+                            </div>
+                            <div class="macos-favorite-tools">
+                                <button class="btn btn-secondary" id="export-favorites-btn">エクスポート</button>
+                                <label class="btn btn-secondary import-favorites-label" for="import-favorites-input">インポート</label>
+                                <input type="file" id="import-favorites-input" accept="application/json,.json">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="preview-card" id="positive-preview-card">
+                        <div class="preview-header">
+                            <h2>ポジティブプロンプト</h2>
+                            <div class="badge positive-badge">SFW</div>
+                        </div>
+                        <div class="textarea-wrapper">
+                            <textarea id="positive-prompt-output" readonly placeholder="タグを選択すると、ここにプロンプトが生成されます..."></textarea>
+                        </div>
+                        <div class="preview-actions">
+                            <div class="manual-input-group">
+                                <input type="text" id="manual-positive-input" placeholder="カスタムタグを入力...">
+                                <button id="add-manual-positive-btn">追加</button>
+                            </div>
+                            <div class="action-buttons">
+                                <button class="btn btn-secondary" id="clear-positive-btn">クリア</button>
+                                <button class="btn btn-primary btn-copy" id="copy-positive-btn">
+                                    <span class="copy-text">コピー</span>
+                                    <span class="copy-success-text" style="display: none;">コピー完了</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="preview-card">
+                        <div class="preview-header">
+                            <h2>ネガティブプロンプト</h2>
+                        </div>
+                        <div class="textarea-wrapper">
+                            <textarea id="negative-prompt-output" readonly placeholder="ネガティブタグを選択すると、ここにプロンプトが生成されます..."></textarea>
+                        </div>
+                        <div class="preview-actions">
+                            <div class="manual-input-group">
+                                <input type="text" id="manual-negative-input" placeholder="カスタムタグを入力...">
+                                <button id="add-manual-negative-btn">追加</button>
+                            </div>
+                            <div class="action-buttons">
+                                <button class="btn btn-secondary" id="clear-negative-btn">クリア</button>
+                                <button class="btn btn-primary btn-copy" id="copy-negative-btn">
+                                    <span class="copy-text">コピー</span>
+                                    <span class="copy-success-text" style="display: none;">コピー完了</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <footer class="app-footer">
+            <p>&copy; 2026 AnimaI T2I. macOS HTML standalone build.</p>
+        </footer>
+    </div>
+    <script src="prompts-data.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
